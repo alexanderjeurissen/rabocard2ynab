@@ -53,18 +53,18 @@ struct YnabTransaction {
 
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "git-hooked", about = "Explanation of git-hooked usage.")]
+#[structopt(name = "rabocard2ynab", about = "Explanation of rabocard2ynab usage.")]
 struct Cli {
     #[structopt(
         long,
-        help = "specify raw csv export from Rabo card.",
+        help = "Path to Rabobank creditcard transaction csv export.",
         parse(from_os_str)
     )]
     input: PathBuf,
 
     #[structopt(
         long,
-        help = "specify path to export the converted Ynab compatible csv. defaults to <input_filename>_ynab.csv.",
+        help = "Path to store converted Ynab compatible csv. defaults to rabocard_<timestamp>_ynab.csv in same directory as input.",
         parse(from_os_str)
     )]
     output: Option<PathBuf>,

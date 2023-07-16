@@ -2,6 +2,12 @@
 name = "rabocard2ynab"
 version = "0.1.0"
 authors = ["Alexander Jeurissen <1220084+alexanderjeurissen@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+description = "A command-line tool to convert Rabobank creditcard csv exports to a Ynab compatible import format"
+homepage = "https://github.com/alexanderjeurissen/rabocard2ynab"
+keywords = ["cli", "rabobank", "creditcard", "rabocard", "csv"]
+categories = ["command-line-utilities"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
