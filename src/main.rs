@@ -1,76 +1,62 @@
 extern crate pretty_env_logger;
+#[macro_use] extern crate log;
 
-use std::{error::Error};
-use csv::{Reader, Writer};
+use std::{error::Error, env};
 
-use log::{info};
+use log::{info, Level};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use structopt::StructOpt;
+use clap::Parser;
 
-#[derive(Debug, serde::Deserialize)]
-struct RaboCardTransaction {
-  #[serde(rename = "Tegenrekening IBAN")]
-  counter_party: String,
-  #[serde(rename = "Munt")]
-  currency: String,
-  #[serde(rename = "Creditcard Nummer")]
-  card_number: String,
-  #[serde(rename = "Productnaam")]
-  product_name: String,
-  #[serde(rename = "Creditcard Regel1")]
-  line_one: String,
-  #[serde(rename = "Creditcard Regel2")]
-  line_two: String,
-  #[serde(rename = "Transactiereferentie")]
-  memo: String,
-  #[serde(rename = "Datum")]
-  date: String,
-  #[serde(rename = "Bedrag")]
-  amount: String,
-  #[serde(rename = "Omschrijving")]
-  payee: String,
-  #[serde(rename = "Oorspr bedrag")]
-  paid_amount: String,
-  #[serde(rename = "Oorspr munt")]
-  paid_currency: String,
-  #[serde(rename = "Koers")]
-  exchange_rate: String,
-}
+const RABO_CARD_COLUMNS: [&'static str; 13] = [
+  "Tegenrekening IBAN",
+  "Munt",
+  "Creditcard Nummer",
+  "Productnaam",
+  "Creditcard Regel1",
+  "Creditcard Regel2",
+  "Transactiereferentie",
+  "Datum",
+  "Bedrag",
+  "Omschrijving",
+  "Oorspr bedrag",
+  "Oorspr munt",
+  "Koers"
+];
 
-#[derive(Debug, serde::Serialize)]
-struct YnabTransaction {
-  #[serde(rename(serialize = "Date"))]
-  date: String,
-  #[serde(rename(serialize = "Payee"))]
-  payee: String,
-  #[serde(rename(serialize = "Memo"))]
-  memo: String,
-  #[serde(rename(serialize = "Amount"))]
-  amount: String
-}
+const YNAB_COLUMNS: [&'static str; 4] = [
+  "Date",
+  "Payee",
+  "Memo",
+  "Amount"
+];
 
-
-#[derive(StructOpt, Debug)]
-#[structopt(name = "rabocard2ynab", about = "Explanation of rabocard2ynab usage.")]
-struct Cli {
-    #[structopt(
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(
         long,
-        help = "Path to Rabobank creditcard transaction csv export.",
-        parse(from_os_str)
+        help = "Path to one or many Rabobank creditcard transaction csv exports.",
     )]
-    input: PathBuf,
+    files: Vec<PathBuf>,
 
-    #[structopt(
+    #[arg(
         long,
-        help = "Path to store converted Ynab compatible csv. defaults to rabocard_<timestamp>_ynab.csv in same directory as input.",
-        parse(from_os_str)
+        help = "Path to store converted Ynab compatible csv. defaults to rabocard_<timestamp>_ynab.csv in current working directory.",
     )]
     output: Option<PathBuf>,
+
+    #[arg(
+      long,
+      env = "LOG",
+      default_value = "info",
+      help = "desired verbosity of logging during execution (trace, debug, info, warning, error)."
+    )]
+    log_level: log::Level
 }
 
-fn process_csv(input_path: &PathBuf, output_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+/* fn process_csv(source_path: &PathBuf, destination: &PathBuf) -> Result<(), Box<dyn Error>> {
   let mut rdr = Reader::from_path(input_path.as_path())?;
   let mut writer = Writer::from_path(output_path.as_path())?;
 
@@ -93,34 +79,49 @@ fn process_csv(input_path: &PathBuf, output_path: &PathBuf) -> Result<(), Box<dy
   }
 
   Ok(())
-}
+} */
 
 fn main() -> Result<(), Box<dyn Error>> {
   let start = Instant::now();
-  pretty_env_logger::init_custom_env("LOG");
+  let args = Args::parse();
 
-  let args = Cli::from_args();
+  set_log_level(args.log_level);
 
-  let output_path: PathBuf = output_path(&args.input, &args.output);
+  let _output_path: PathBuf = output_path(&args.output);
 
-  if let Err(err) = process_csv(&args.input, &output_path) {
+  /* if let Err(err) = process_csv(&args.files[0], &args.output) {
     panic!("error processing csv: {}", err);
-  }
+  } */
 
   // NOTE: we are done log total execution time
   let duration = start.elapsed();
-  info!("'FINISHED after {:?}", duration);
+  debug!("'FINISHED after {:?}", duration);
 
   return Ok(());
 }
 
-fn output_path(input_path: &PathBuf, output_path: &Option<PathBuf>) -> PathBuf {
+fn set_log_level(log_level: Level) {
+  // NOTE: workaround to allow setting the pretty_env log level
+  // through CLI argument.
+  env::set_var("PRETTY_ENV_LOG_LEVEL", log_level.to_string());
+  pretty_env_logger::init_custom_env("PRETTY_ENV_LOG_LEVEL");
+}
+
+fn output_path(output_path: &Option<PathBuf>) -> PathBuf {
   match output_path {
     Some(path) => { path.to_path_buf() }
     None => {
-      let file_name: String = format!("rabocard_{}_ynab", chrono::offset::Local::now().timestamp());
+      let path: PathBuf = match env::current_dir() {
+        Ok(p) => { p }
+        Err(e) => { panic!("Could not obtain current working directory: {}", e) }
+      };
 
-      input_path.with_file_name(file_name).with_extension("csv")
+      let file_name: String = format!("rabocard_{}_ynab", chrono::offset::Local::now().timestamp());
+      let destination: PathBuf = path.with_file_name(file_name).with_extension("csv");
+
+      info!("No output path provided, defaulting to {:?}", destination);
+
+      destination
     }
   }
 }
