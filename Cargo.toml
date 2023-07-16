@@ -6,6 +6,7 @@ license = "MIT"
 readme = "README.md"
 description = "A command-line tool to convert Rabobank creditcard csv exports to a Ynab compatible import format"
 homepage = "https://github.com/alexanderjeurissen/rabocard2ynab"
+repository = "https://github.com/alexanderjeurissen/rabocard2ynab"
 keywords = ["cli", "rabobank", "creditcard", "rabocard", "csv"]
 categories = ["command-line-utilities"]
 edition = "2021"
