@@ -1,6 +1,6 @@
 extern crate pretty_env_logger;
 
-use std::{error::Error, io, process};
+use std::{error::Error};
 use csv::{Reader, Writer};
 
 use log::{info};
